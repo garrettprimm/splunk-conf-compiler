@@ -84,8 +84,10 @@ def splunk_conf_decompile(arguments: argparse.Namespace) -> None:
     config_dir = arguments.config_dir
     path_check(config_dir)
     
+    # DONE Determine .conf files to split by stanza 
+    conf_files = glob.glob(pathname=f"{config_dir}/*.conf")
     
-    # TODO Determine .conf files to split by stanza 
+    
     # TODO Parse through each .conf, stanza by stanza generating a <folder of stanza name>/whatever.conf
     return
 

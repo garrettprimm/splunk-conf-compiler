@@ -2,13 +2,14 @@
 Splunk .Conf Compiler is intended to improve the capabilities 
 of maintaining .conf stanzas across all .conf files in local/ of a splunk app
 """
+from ast import And
 import fileinput
 import os
 import glob
 import argparse
 import sys
 from itertools import groupby
-from tokenize import group
+import shutil
 
 def path_check(configdir: str) -> bool:
     """
@@ -46,23 +47,33 @@ def splunk_conf_compile(arguments: argparse.Namespace) -> None:
     """
     config_dir = arguments.config_dir
     path_check(config_dir)
+    print("compiling .conf")
     # DONE Check only one layer deep for .conf files, Also check in the base of local/ dir for any .conf files
     conf_files = glob.glob(pathname=f"{config_dir}/**/**.conf", recursive=True)
     # DONE Determine types of .conf files to be compiled together
     conf_object = sorted([{"path": file, "type":os.path.split(file)[1]} for file in conf_files], key=lambda e: e['type'])
-    # TODO Mash same named .conf files together and put them into the base of local/ dir
-    
-        # TODO spit out status page of compiling X number of whatever.conf
-    
+    # DONE Mash same named .conf files together and put them into the base of local/ dir
     for conf_type, grouped_conf_object in groupby(conf_object, key=lambda e: e['type']):
         grouped_conf_files = [conf['path'] for conf in grouped_conf_object]
-        print(grouped_conf_files)
-        # BUG files not reading from existing .conf file in root of config directory
-        with open(f"{config_dir}/{conf_type}", 'w') as fout, fileinput.input(grouped_conf_files) as fin:
+        with open(f"{config_dir}/.tmp.{conf_type}", 'w') as fout, fileinput.input(grouped_conf_files) as fin:
+            # TODO spit out status page of compiling X number of whatever.conf
             for line in fin:
-                if fin.isfirstline():
-                    fout.write("\n")
-                fout.write(line)
+                if fin.isfirstline() and (os.path.dirname(fin.filename()) != os.path.dirname(config_dir) ):
+                    fout.write("\n\n")
+                    fout.write(line)
+                elif (os.path.dirname(fin.filename()) != os.path.dirname(config_dir)):
+                    fout.write(line)
+                else:
+                    fout.write(line)
+    # TODO implement writing .tmp.* file
+    tmp_files = glob.glob(pathname=f"{config_dir}/.tmp.*.conf")
+    for file in tmp_files:
+        shutil.move(file, os.path.join(os.path.dirname(file),os.path.basename(file).strip(".tmp.")))
+    # TODO Cleanup any old files not in root of config_dir
+    cleanup_files =  [os.path.dirname(file) for file in conf_files if os.path.dirname(file) != os.path.dirname(config_dir)]
+    for each in cleanup_files:
+        shutil.rmtree(each)
+    print("compiling complete")
     return
 
 def splunk_conf_decompile(arguments: argparse.Namespace) -> None:

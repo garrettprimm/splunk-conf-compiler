@@ -51,7 +51,7 @@ def splunk_conf_compile(arguments: argparse.Namespace) -> None:
     # DONE Check only one layer deep for .conf files, Also check in the base of local/ dir for any .conf files
     conf_files = glob.glob(pathname=f"{config_dir}/**/**.conf", recursive=True)
     # DONE Determine types of .conf files to be compiled together
-    conf_object = sorted([{"path": file, "type":os.path.split(file)[1]} for file in conf_files], key=lambda e: e['type'])
+    conf_object = sorted([{"path": file, "type":os.path.basename(file)} for file in conf_files], key=lambda e: e['type'])
     # DONE Mash same named .conf files together and put them into the base of local/ dir
     for conf_type, grouped_conf_object in groupby(conf_object, key=lambda e: e['type']):
         grouped_conf_files = [conf['path'] for conf in grouped_conf_object]
@@ -65,11 +65,11 @@ def splunk_conf_compile(arguments: argparse.Namespace) -> None:
                     fout.write(line)
                 else:
                     fout.write(line)
-    # TODO implement writing .tmp.* file
+    # DONE implement writing .tmp.* file
     tmp_files = glob.glob(pathname=f"{config_dir}/.tmp.*.conf")
     for file in tmp_files:
         shutil.move(file, os.path.join(os.path.dirname(file),os.path.basename(file).strip(".tmp.")))
-    # TODO Cleanup any old files not in root of config_dir
+    # DONE Cleanup any old files not in root of config_dir
     cleanup_files =  [os.path.dirname(file) for file in conf_files if os.path.dirname(file) != os.path.dirname(config_dir)]
     for each in cleanup_files:
         shutil.rmtree(each)

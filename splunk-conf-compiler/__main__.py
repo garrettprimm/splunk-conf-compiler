@@ -2,7 +2,6 @@
 Splunk .Conf Compiler is intended to improve the capabilities 
 of maintaining .conf stanzas across all .conf files in local/ of a splunk app
 """
-from ast import And
 import fileinput
 import os
 import glob
@@ -10,6 +9,9 @@ import argparse
 import sys
 from itertools import groupby
 import shutil
+import importlib
+conf_parser = importlib.import_module("addonfactory_splunk_conf_parser_lib")
+
 
 def path_check(configdir: str) -> bool:
     """
@@ -86,9 +88,24 @@ def splunk_conf_decompile(arguments: argparse.Namespace) -> None:
     
     # DONE Determine .conf files to split by stanza 
     conf_files = glob.glob(pathname=f"{config_dir}/*.conf")
+    # DONE Parse through each .conf, stanza by stanza generating a <folder of stanza name>/whatever.conf
+    for file in conf_files:
+        parser = conf_parser.TABConfigParser()
+        parser._read(open(file,"r"), file)
+        for each in parser.item_dict():
+            new_path = os.path.join(config_dir,each)
+            if os.path.exists(new_path) is False:
+                os.mkdir(new_path)
+            myparser = conf_parser.TABConfigParser()
+            options = parser.items(each)
+            myparser.add_section(each)
+            for k,v in options:
+                myparser.set(each, k,v)
+            myparser.write(open(f"{new_path}/{os.path.basename(file)}","w"))
+            
+    for each in conf_files:
+        os.remove(each)
     
-    
-    # TODO Parse through each .conf, stanza by stanza generating a <folder of stanza name>/whatever.conf
     return
 
 def main() -> None:
